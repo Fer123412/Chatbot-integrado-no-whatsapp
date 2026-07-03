@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  evolution-api:
+    container_name: evolution_api
+    image: evoapicloud/evolution-api:latest
+    restart: always
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+
+    environment:
+      # API
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=senha123
+
+      # Banco de Dados
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution@postgres:5432/evolution?schema=public
+
+      # Redis
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/6
+
+      # Logs
+      - LOG_LEVEL=ERROR
+
+      # OpenAI (opcional)
+      - OPENAI_ENABLED=false
+      - OPENAI_API_KEY=${OPEINAI_API_KEY}
+
+    volumes:
+      - evolution_instances:/evolution/instances
+
+    networks:
+      - evolution-net
+
+  postgres:
+    container_name: evolution_postgres
+    image: postgres:15
+
+    restart: always
+
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - evolution-net
+
+  redis:
+    container_name: evolution_redis
+    image: redis:7-alpine
+
+    restart: always
+
+    command: redis-server --appendonly yes
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - evolution-net
+
+volumes:
+  evolution_instances:
+  postgres_data:
+  redis_data:
+
+networks:
+  evolution-net:
+    driver: bridge
